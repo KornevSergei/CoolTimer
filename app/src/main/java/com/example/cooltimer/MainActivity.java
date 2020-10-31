@@ -1,12 +1,17 @@
 package com.example.cooltimer;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import android.content.Intent;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.SeekBar;
@@ -169,10 +174,44 @@ public class MainActivity extends AppCompatActivity {
     private void resetTimer() {
         //останавливаем таймер и меняем текст
         countDownTimer.cancel();
-        textView.setText("00:60");
+        textView.setText("00:30");
         button.setText("Старт");
         seekBar.setEnabled(true);
         seekBar.setProgress(30);
         isTimerOn = false;
+    }
+
+
+    //переопределяем метод для создания меню
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        //получаем значение из метода гетменюинфлейтор
+        MenuInflater menuInflater = getMenuInflater();
+        //передаём данные из файла
+        menuInflater.inflate(R.menu.timer_menu, menu);
+        return true;
+
+    }
+
+    //делаем действие по клику на настроики
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        //пределяем по какому элементу клик
+        int id = item.getItemId();
+        //проверяем и даём действие открыть новое активити
+        if (id == R.id.action_settings) {
+            Intent openSettings = new Intent(this, SettingsActivity.class);
+            startActivity(openSettings);
+            return true;
+
+            //тоже самое по клику на другой элемент
+        } else if (id == R.id.action_about) {
+            Intent openAbout = new Intent(this, AboutActivity.class);
+            startActivity(openAbout);
+            return true;
+        }
+
+
+        return super.onOptionsItemSelected(item);
     }
 }
