@@ -1,13 +1,17 @@
 package com.example.cooltimer;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceManager;
 
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.os.CountDownTimer;
-import android.os.Handler;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -16,9 +20,10 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.SeekBar;
 import android.widget.TextView;
+import android.widget.Toast;
 
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
 
 
     private SeekBar seekBar;
@@ -29,6 +34,12 @@ public class MainActivity extends AppCompatActivity {
     private boolean isTimerOn;
 
     private CountDownTimer countDownTimer;
+
+    //переменная для установки интервала
+    private int defaultInterval;
+
+    //переменная для частого обращения к полю
+    SharedPreferences sharedPreferences;
 
 
     @Override
@@ -78,10 +89,12 @@ public class MainActivity extends AppCompatActivity {
         textView = findViewById(R.id.textView);
         button = findViewById(R.id.button);
 
+        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+
         //устанавливаем максимум
         seekBar.setMax(600);
-        //устанавливаем начальный параметр
-        seekBar.setProgress(30);
+        //устанавливаем начальный параметр ызывая метод
+        setIntervalFromSharedPreferences(sharedPreferences);
 
         //по умолчанию ставим что таймер не включен
         isTimerOn = false;
@@ -107,6 +120,9 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //регистрируем
+        sharedPreferences.registerOnSharedPreferenceChangeListener(this);
+
 
     }
 
@@ -128,12 +144,27 @@ public class MainActivity extends AppCompatActivity {
 
                 @Override
                 public void onFinish() {
-                    Log.d("onFinish: ", "Всё!");
-                    //создаём плеер для звонка по окончанию
-                    MediaPlayer mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.bell);
-                    mediaPlayer.start();
-                    resetTimer();
+                    //получем доступ и узнаем включен или выключен звук
+                    SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                    //проверяем какой результат находится в файле, если  включен то запускаем звук
+                    if (sharedPreferences.getBoolean("enable_sound", true)) {
 
+                        //обращаемся к массиву мелодий делаем проверку на выбранный звук
+                        String melodyName = sharedPreferences.getString("timer_melody", "bell");
+                        if (melodyName.equals("bell")) {
+                            //создаём плеер для звонка по окончанию
+                            MediaPlayer mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.bell);
+                            mediaPlayer.start();
+                        } else if (melodyName.equals("laugh")) {
+
+                            Log.d("onFinish: ", "Всё!");
+                            //создаём плеер для звонка по окончанию
+                            MediaPlayer mediaPlayer = MediaPlayer.create(getApplicationContext(), R.raw.laugh);
+                            mediaPlayer.start();
+                        }
+
+                    }
+                    resetTimer();
                 }
             };
             countDownTimer.start();
@@ -174,11 +205,11 @@ public class MainActivity extends AppCompatActivity {
     private void resetTimer() {
         //останавливаем таймер и меняем текст
         countDownTimer.cancel();
-        textView.setText("00:30");
         button.setText("Старт");
         seekBar.setEnabled(true);
-        seekBar.setProgress(30);
         isTimerOn = false;
+        //устанавливаем начальный параметр ызывая метод
+        setIntervalFromSharedPreferences(sharedPreferences);
     }
 
 
@@ -211,7 +242,42 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
 
-
         return super.onOptionsItemSelected(item);
+    }
+
+    //устанавливаем интервал из преференс
+    private void setIntervalFromSharedPreferences(SharedPreferences sharedPreferences) {
+
+//        //не закрываем с ошибкой если ввели строковое значение вместо инт в настройках
+//        try {
+//
+//        } catch (NumberFormatException nef){
+//            Toast.makeText(this, "Произошла ошибка первая", Toast.LENGTH_SHORT).show();
+//
+//        } catch (Exception e){
+//            Toast.makeText(this, "Произошла ошибка общая", Toast.LENGTH_SHORT).show();
+//
+//        }
+        //присваиваем интервал
+        defaultInterval = Integer.valueOf(sharedPreferences.getString("default_interval", "30"));
+        long defaultIntervalInMillis = defaultInterval * 1000;
+        updateTimer(defaultIntervalInMillis);
+        //станавливаем новые данные для сикбара
+        seekBar.setProgress(defaultInterval);
+    }
+
+    @Override
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        if (key.equals("default_interval")){
+            setIntervalFromSharedPreferences(sharedPreferences);
+        }
+    }
+
+    //снимаем с регистрации
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        sharedPreferences.unregisterOnSharedPreferenceChangeListener(this);
     }
 }
